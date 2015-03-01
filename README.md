@@ -50,6 +50,7 @@ data.load();
 ```
 
 How is this different than promises? It
+
 1. triggers the callbacks each time it is `load()`ed, instead of only once
 2. it provides a notification on request start
 3. it is slightly uglier as an API
@@ -70,7 +71,7 @@ Promises support:
 
 However this support is fire-once. Once a promise is resolved, it is resolved forever. The reloading use-case is not supported.
 
-### Need
+### Requirements
 Would be great to have a promise-like object that:
 
 1. its completion can be reset or re-triggered, which will invoke all the `.then` methods again
