@@ -92,20 +92,22 @@ Then simply open [SpecRunner.html](SpecRunner.html) with your browser.
 - Multiple modules access the loaded data, and transform them into a different representation (each module does a different transform), also storing them locally.
 - The transformed data is exposed to the view, with a 'loading' indication when the original data is (re)loaded and/or the transformation is in progress.
 
-### Promises
-Promises support:
+### Solution
+
+Can promises do this? Promises support:
 - on resolution callbacks, where the transform function can be attached.
 - a `isResolved` attribute, which is false when the promise has been started but not yet resolved.
-- propagate fully, so a chain can be built
+- propagation, so that transformations can be chained
 
 However this support is fire-once. Once a promise is resolved, it is resolved forever. The reloading use-case is not supported.
 
-### Requirements
 Would be great to have a promise-like object that:
 
 1. its completion can be reset or re-triggered, which will invoke all the `.then` methods again
 2. its start can also be re-triggered, which will set the `isResolved` attribute
 
-This can also be implemented with signals:
-- provides a `.resolved(successCallback, failureCallback, finalyCallback)` function that allows to register callbacks on load finish. This returns a new object with a `.loaded` method, so it can be chained as promises.
-- provides a `.requested(callback)` method that allows to register a single method on request start
+A promise-based implementation of this is possible, with a wrapper that on re-load discards the old promise and creates a new one and re-attaches all the `.then()` callbacks. This can also be implemented with signals:
+- a `.resolved(successCallback, failureCallback, finalyCallback)` signal that allows to register callbacks on load finish. This returns a new object with a `.loaded` method, so it can be chained as promises.
+- a `.requested(callback)` signal that allows to register a single method on request start
+
+This implementation is a signal-based implementation.
