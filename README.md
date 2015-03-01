@@ -75,12 +75,12 @@ How is this different than promises? It
 ## Install
 
 ```sh
-bower install dtheodor/asyncdata --production
+bower install dtheodor/asyncdata.js --production
 ```
 
 ### Run tests
 ```sh
-bower install dtheodor/asyncdata
+bower install dtheodor/asyncdata.js
 ```
 
 Then simply open [SpecRunner.html](SpecRunner.html) with your browser.
