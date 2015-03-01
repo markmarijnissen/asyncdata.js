@@ -89,8 +89,8 @@ Then simply open [SpecRunner.html](SpecRunner.html) with your browser.
 
 ### Problem
 - There's a module that knows how to load (and re-load) data through an API, and stores it locally.
-- Multiple modules access the loaded data, and transform them into a different representation (each module does a different transform), also storing them locally.
-- The transformed data is exposed to the view, with a 'loading' indication when the original data is (re)loaded and/or the transformation is in progress.
+- Multiple modules access the loaded data, and transform them into a different representation (each module does a different transform), also storing them locally. Each time the data they depend on is reloaded, they need to re-run the transformation to update.
+- The transformed data is exposed to the view, with a 'loading' indication when the original data is being (re)loaded and/or the transformation is in progress.
 
 ### Solution
 
@@ -104,7 +104,7 @@ However this support is fire-once. Once a promise is resolved, it is resolved fo
 Would be great to have a promise-like object that:
 
 1. its completion can be reset or re-triggered, which will invoke all the `.then` methods again
-2. its start can also be re-triggered, which will set the `isResolved` attribute
+2. its start can also be a notification that is also possible to re-trigger.
 
 A promise-based implementation of this is possible, with a wrapper that on re-load discards the old promise and creates a new one and re-attaches all the `.then()` callbacks. This can also be implemented with signals:
 - a `.resolved(successCallback, failureCallback, finalyCallback)` signal that allows to register callbacks on load finish. This returns a new object with a `.loaded` method, so it can be chained as promises.
