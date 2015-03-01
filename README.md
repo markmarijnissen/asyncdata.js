@@ -27,21 +27,19 @@ data.load();
 Notifications can be added on each request's start
 
 ```js
-var data = asyncData(function(){
-  return $http.get('api/data');
-})
+data
   .requested(function(){
-    console.log('loading data...')
+      console.log('loading data...')
+    })
+  .resolved(function(data){
+    return transform(data);
   })
-.resolved(function(data){
-  return transform(data);
-})
   .requested(function(){
     console.log('transforming data...')
   })
-.resolved(function(data){
-  console.log('got the transformed data', data);
-});
+  .resolved(function(data){
+    console.log('got the transformed data', data);
+  });
 data.load();
 // we will see:
 // 'loading data...'
@@ -55,6 +53,19 @@ How is this different than promises? It
 2. it provides a notification on request start
 3. it is slightly uglier as an API
 
+
+## Install
+
+```sh
+bower install dtheodor/asyncdata --production
+```
+
+### Run tests
+```sh
+bower install dtheodor/asyncdata
+```
+
+Then simply open [SpecRunner.html](SpecRunner.html) with your browser.
 
 ## Rationale:
 
