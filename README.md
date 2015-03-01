@@ -1,5 +1,5 @@
 # asyncdata.js
-Signal notifications for asynchronous data loading and processing
+Signal notifications for asynchronous data loading and syncrhonous post-processing
 
 ## How to use
 
