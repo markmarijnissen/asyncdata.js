@@ -4,8 +4,9 @@ Signal notifications for asynchronous data loading and post-processing
 ## How to use
 
 ```js
-// create an instance with a callback that loads the data and returns a promise
-var data = asyncData(function(){
+// create an instance. its single parameter is a function that
+// returns a promise. The promise should resolve the expected data
+var data = asyncData(function loadData(){
   return Q($.get('api/data'));
 });
 
@@ -20,7 +21,7 @@ data
   });
 
 data.load();
-// triggers all resolved callbacks, stores result
+// triggers all resolved callbacks
 data.load();
 // triggers all callbacks again
 ```
