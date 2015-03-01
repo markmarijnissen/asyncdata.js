@@ -1,0 +1,42 @@
+{
+  "name": "asyncdata",
+  "main": "asyncdata.js",
+  "version": "0.0.1",
+  "homepage": "https://github.com/dtheodor/asyncdata.js",
+  "authors": [
+    "Dimitris Theodorou <dimitris.theodorou@gmail.com>"
+  ],
+  "description": "Signal notifications for asynchronous data loading and post-processing",
+  "moduleType": [
+    "amd",
+    "globals",
+    "node"
+  ],
+  "keywords": [
+    "signal",
+    "signals",
+    "pubsub",
+    "observer",
+    "promise",
+    "promises"
+  ],
+  "license": "MIT",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "js-signals": "1.0.0"
+  },
+  "devDependencies": {
+    "jasmine": "2.2.1",
+    "q": "0.9.6",
+    "mock-promises": "charleshansen/mock-promises"
+  },
+  "resolutions": {
+    "q": "0.9.6"
+  }
+}
