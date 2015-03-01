@@ -10,13 +10,14 @@ var data = asyncData(function(){
 });
 
 // attach post-processing callbacks
-data.resolved(function(data){
-  return transform(data);
-})
-.resolved(function(data){
-  // this receives the result of the previous 'resolved'
-  console.log('got the transformed data', data);
-});
+data
+  .resolved(function(data){
+    return transform1(data);
+  })
+  .resolved(function(transformed){
+    // this receives the result of the previous 'resolved'
+    return transform2(transformed);
+  });
 
 data.load();
 // triggers all resolved callbacks, stores result
@@ -45,6 +46,22 @@ data.load();
 // 'loading data...'
 // 'transforming data...'
 // 'got the transformed data'
+```
+
+Late `resolved`s will be called immediately with the previous step's cached results
+```js
+var transformed = data
+  .resolved(function(data){
+    return transform1(data);
+  });
+  
+data.load();
+// time goes by..
+
+transformed.resolved(function(data){
+  //this is triggered instantly as long as the transform1 has finished
+  return transform2(data);
+});
 ```
 
 How is this different than promises? It
