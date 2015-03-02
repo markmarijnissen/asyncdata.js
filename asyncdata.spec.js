@@ -41,7 +41,7 @@ describe("AsyncData", function() {
       expect(finalyCb).not.toHaveBeenCalled();
     });
 
-    it("the loaded success callback", function() {
+    it("the resolved success callback", function() {
 
       deferred.resolve([1,2]);
 
@@ -54,7 +54,7 @@ describe("AsyncData", function() {
 
     });
 
-    it("the loaded failure callback", function() {
+    it("the resolved failure callback", function() {
       deferred.reject('not happening');
 
       mockPromises.executeForPromise(deferred.promise);
@@ -67,7 +67,7 @@ describe("AsyncData", function() {
     });
   });
 
-  describe('with chained \'loaded\' should', function(){
+  describe('with chained \'resolved\' should', function(){
 
     var successCb;
     var failureCb;
@@ -80,7 +80,7 @@ describe("AsyncData", function() {
       finalyCb = jasmine.createSpy('finalyCb');
     });
 
-    describe('propagate the original data if no callbacks are added to the first \'loaded\'', function(){
+    describe('propagate the original data if no callbacks are added to the first \'resolved\'', function(){
 
       beforeEach(function(){
         data
@@ -117,7 +117,7 @@ describe("AsyncData", function() {
 
     });
 
-    describe('propagate the returned data of the callbacks of the first \'loaded\'', function(){
+    describe('propagate the returned data of the callbacks of the first \'resolved\'', function(){
       var successData;
       var failureData;
 
@@ -169,7 +169,7 @@ describe("AsyncData", function() {
 
   });
 
-  describe('with doubly chained \'loaded\' should', function() {
+  describe('with doubly chained \'resolved\' should', function() {
 
     var successCb;
     var failureCb;
@@ -182,9 +182,9 @@ describe("AsyncData", function() {
       finalyCb = jasmine.createSpy('finalyCb');
     });
 
-    describe('propagate the returned data of the callbacks of the second \'loaded\'', function () {
+    describe('propagate the returned data of the callbacks of the second \'resolved\'', function () {
 
-      describe('when callbacks are added in the first \'loaded\'', function(){
+      describe('when callbacks are added in the first \'resolved\'', function(){
         var successData;
         var failureData;
         var secondSuccessData;
@@ -237,7 +237,7 @@ describe("AsyncData", function() {
         });
       });
 
-      describe('when no callbacks are added on first \'loaded\'', function(){
+      describe('when no callbacks are added on first \'resolved\'', function(){
 
         var secondSuccessData;
         var secondFailureData;
@@ -287,7 +287,7 @@ describe("AsyncData", function() {
 
     });
 
-    describe('propagate the returned data of the callbacks of the first \'loaded\'', function () {
+    describe('propagate the returned data of the callbacks of the first \'resolved\'', function () {
 
       var successData;
       var failureData;
@@ -429,7 +429,7 @@ describe("AsyncData", function() {
     })
   });
 
-  describe('\'loaded\' should be immediately triggered for a chained result if the source has already been loaded', function(){
+  describe('\'resolved\' should be immediately triggered for a chained result if the source has already been loaded', function(){
 
     var successCb;
     var failureCb;
@@ -484,7 +484,7 @@ describe("AsyncData", function() {
 
   });
 
-  it('second \'load\' should retrigger loaded', function(){
+  it('second \'load\' should retrigger resolved', function(){
 
     var successCb1 = jasmine.createSpy('successCb1');
     var successCb2 = jasmine.createSpy('successCb2');
@@ -526,28 +526,31 @@ describe("AsyncData", function() {
       expect(combined.resolved).toBeDefined();
     });
 
-    describe('returned AsyncData', function(){
+    describe('combined AsyncData', function(){
 
-      var combined, successCb, failureCb, finalyCb, loadPromise, loadPromise2;
+      var combined, successCb, failureCb, finalyCb, requestCb;
 
       beforeEach(function() {
+        combined = asyncData.all(data, data2);
+
         successCb = jasmine.createSpy('successCb');
         failureCb = jasmine.createSpy('failureCb');
         finalyCb = jasmine.createSpy('finalyCb');
-
-        combined = asyncData.all(data, data2)
-          .resolved(successCb, failureCb, finalyCb);
-
-        data.load();
-        data2.load();
-
-        expect(successCb).not.toHaveBeenCalled();
-        expect(failureCb).not.toHaveBeenCalled();
-        expect(finalyCb).not.toHaveBeenCalled();
-
+        requestCb = jasmine.createSpy('requestCb');
       });
 
       describe('resolved callback', function(){
+
+        beforeEach(function(){
+          combined.resolved(successCb, failureCb, finalyCb);
+
+          data.load();
+          data2.load();
+
+          expect(successCb).not.toHaveBeenCalled();
+          expect(failureCb).not.toHaveBeenCalled();
+          expect(finalyCb).not.toHaveBeenCalled();
+        });
 
         it('should be triggered when both source signals are resolved', function(){
 
@@ -573,6 +576,7 @@ describe("AsyncData", function() {
           expect(finalyCb.calls.count()).toEqual(1);
 
           data2.load();
+          mockPromises.executeForPromise(deferred2.promise);
 
           expect(successCb).toHaveBeenCalledWith([[5, 6]], ['lala']);
           expect(failureCb).not.toHaveBeenCalled();
@@ -580,13 +584,150 @@ describe("AsyncData", function() {
 
           expect(successCb.calls.count()).toEqual(2);
           expect(finalyCb.calls.count()).toEqual(2);
-        })
+        });
+
+        it('should not be triggered when only one source signals is resolved', function(){
+
+          deferred.resolve([5, 6]);
+
+          mockPromises.executeForPromise(deferred.promise);
+
+          expect(successCb).not.toHaveBeenCalled();
+          expect(failureCb).not.toHaveBeenCalled();
+          expect(finalyCb).not.toHaveBeenCalled();
+        });
+
+        it('should be triggered when at least one source signals is rejected', function(){
+
+          deferred.reject('pwned');
+
+          mockPromises.executeForPromise(deferred.promise);
+
+          expect(successCb).not.toHaveBeenCalled();
+          expect(failureCb).toHaveBeenCalledWith('pwned');
+          expect(finalyCb).not.toHaveBeenCalled();
+        });
+      });
+
+      describe('requested callback', function(){
+
+        beforeEach(function(){
+          combined.requested(requestCb);
+        });
+
+        it('should be triggered when at least one source signal is loaded', function(){
+          data2.load();
+
+          expect(combined.isLoading).toEqual(true);
+          expect(requestCb).toHaveBeenCalled();
+
+        });
+
+      });
+
+      describe('with chained resolved', function(){
+
+        it('should propagate requested to the chained AsyncData', function(){
+          var requestCb2 = jasmine.createSpy('requestCb2');
+          var result1 = combined.
+            resolved().
+            requested(requestCb);
+          var result2 = result1.
+            resolved(function(){
+              return 6;
+            }).
+            requested(requestCb2);
+
+          data.load();
+          expect(result1.isLoading).toEqual(true);
+          expect(result2.isLoading).toEqual(true);
+          expect(requestCb).toHaveBeenCalled();
+          expect(requestCb2).toHaveBeenCalled();
+
+        });
+
+        it('should propagate arguments without intermediate results', function(){
+
+          combined.resolved()
+            .resolved(successCb, failureCb, finalyCb);
+
+          deferred.resolve([5, 6]);
+          deferred2.resolve('lala');
+          data.load();
+          data2.load();
+
+          mockPromises.executeForPromise(deferred.promise);
+          mockPromises.executeForPromise(deferred2.promise);
+
+          expect(successCb).toHaveBeenCalledWith([[5, 6]], ['lala']);
+          expect(failureCb).not.toHaveBeenCalled();
+          expect(finalyCb).toHaveBeenCalled();
+
+        });
+
+        it('should propagate success arguments with intermediate results', function(){
+
+          combined
+            .resolved(function(){
+              return 5;
+            })
+            .resolved(successCb, failureCb, finalyCb);
+
+          deferred.resolve([5, 6]);
+          deferred2.resolve('lala');
+          data.load();
+          data2.load();
+
+          mockPromises.executeForPromise(deferred.promise);
+          mockPromises.executeForPromise(deferred2.promise);
+
+          expect(successCb).toHaveBeenCalledWith(5);
+          expect(failureCb).not.toHaveBeenCalled();
+          expect(finalyCb).toHaveBeenCalled();
+
+        });
+
+        it('should propagate rejection arguments with intermediate results', function(){
+
+          combined
+            .resolved(null, function(){
+              return 'failed';
+            })
+            .resolved(successCb, failureCb, finalyCb);
+
+          deferred.resolve([5, 6]);
+          deferred2.reject('lala');
+          data.load();
+          data2.load();
+
+          mockPromises.executeForPromise(deferred.promise);
+          mockPromises.executeForPromise(deferred2.promise);
+
+          expect(successCb).not.toHaveBeenCalled();
+          expect(failureCb).toHaveBeenCalledWith('failed');
+          expect(finalyCb).toHaveBeenCalled();
+
+        });
+
+
+      });
+
+      it('should trigger resolved when attached late', function(){
+
+        deferred.resolve([5, 6]);
+        deferred2.resolve('lala');
+        data.load();
+        data2.load();
+        mockPromises.executeForPromise(deferred.promise);
+        mockPromises.executeForPromise(deferred2.promise);
+
+        combined.resolved(successCb, failureCb, finalyCb);
+
+        expect(successCb).toHaveBeenCalledWith([[5, 6]], ['lala']);
+        expect(failureCb).not.toHaveBeenCalled();
+        expect(finalyCb).toHaveBeenCalled();
+
       })
-
-
-
-    })
-
-
+    });
   });
 });

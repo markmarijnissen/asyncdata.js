@@ -47,7 +47,7 @@
    * @return {AsyncDataSource}
    *
    * Example:
-   *
+   * <code>
    asyncData(function(){
       return $http.get('api/data');
     })
@@ -110,7 +110,7 @@
    .resolved(function(data){
       console.log('got the transformed data', data)
     });
-
+   * </code>
    *
    */
   function asyncData(loadFn) {
@@ -265,16 +265,20 @@
     var successSignals = [];
     var failureSignals = [];
     var finallySignals = [];
-    var loadingStartedSignals = [];
     for (i = 0; i < asyncDataArray.length; i++){
       successSignals.push(asyncDataArray[i]._success);
       failureSignals.push(asyncDataArray[i]._failure);
       finallySignals.push(asyncDataArray[i]._finally);
-      loadingStartedSignals.push(asyncDataArray[i]._loadingStarted);
+
+      // unlike the signals involved with `resolved`, the `requested`
+      // signal is triggered explicitily by the parent signal to all its
+      // _chainedAsyncData. so we add
+      // ourselves to each of the source signals _chainedAsyncData
+      asyncDataArray[i]._chainedAsyncData.push(this); //to propagate `requested`
     }
 
     this.isLoading = false;
-    this._loadingStarted = signalFromAny(loadingStartedSignals);
+    this._loadingStarted = new Signal();
 
     // success when all sourceSignals succeed
     this._success = compoundSignalFromArray(successSignals);//new CompoundSignal.apply(null, successSignals);
@@ -282,13 +286,6 @@
 
     // failure when at least one failureSignal fails
     this._failure = signalFromAny(failureSignals);
-    //new Signal();
-    //var self = this;
-    //for (i = 0; i < arguments.length; i++) {
-    //  arguments[i]._failure.add(function(){
-    //    self._failure.dispatch.apply(null, arguments);
-    //  });
-    //}
 
     // finally when all finallySignals are triggered
     this._finally = compoundSignalFromArray(finallySignals);//new CompoundSignal.apply(null, finallySignals);
@@ -296,6 +293,9 @@
 
     this._hasLoadedOnce = false;
     this._lastSuccessData = undefined;
+
+    // a list of AsyncData that are chained to this.
+    // used to propagate `requested` events to chained children
     this._chainedAsyncData = [];
   }
   CombinedAsyncData.prototype = Object.create(AsyncData.prototype);
@@ -341,18 +341,6 @@
   asyncData.all = function(){
     return new CombinedAsyncData(arguments);
   };
-
-  //(function asyncDataAll(){
-  //  var _CombinedAsyncData = CombinedAsyncData;
-  //  function CombinedAsyncData(args) {
-  //    return _CombinedAsyncData.apply(this, args);
-  //  }
-  //  CombinedAsyncData.prototype = _CombinedAsyncData.prototype;
-  //
-  //  return function(){
-  //    return new CombinedAsyncData(arguments);
-  //  };
-  //})();
 
   return asyncData;
 
