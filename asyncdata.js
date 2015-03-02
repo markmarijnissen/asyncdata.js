@@ -7,16 +7,17 @@
 
 
 (function(definition) {
-    if (typeof module !== 'undefined') {
-      module.exports = definition();
-    }
-    else if (typeof define === 'function' && define.amd) {
-      define(['signals'], definition);
-    }
-    else {
-      this['asyncData'] = definition(signals.Signal);
-    }
-}(function(Signal) {
+  if (typeof module !== 'undefined') {
+    var signals_ = require('signals');
+    module.exports = definition(signals_.Signal, signals_.CompoundSignal);
+  }
+  else if (typeof define === 'function' && define.amd) {
+    define(['signals', 'CompoundSignal'], definition);
+  }
+  else {
+    this['asyncData'] = definition(signals.Signal, signals.CompoundSignal);
+  }
+}(function(Signal, CompoundSignal) {
 
   /**
    * Returns an object with a `resolved(success, failure, finally)` method,
@@ -146,22 +147,24 @@
       // if already fired, fire immediately on 'loaded' callback registration
       var data = self._lastSuccessData;
       if (success) {
-        data = success.call(self, data);
+        data = [success.apply(null, data)];
       }
-      child._dispatchSuccess(data);
+      child._dispatchSuccess.apply(child, data);
     }
-    self._success.add(function (data) {
+    self._success.add(function () {
+      var data = arguments;
       if (success) {
-        data = success.call(self, data);
+        data = [success.apply(null, data)];
       }
-      child._dispatchSuccess(data);
+      child._dispatchSuccess.apply(child, data);
     });
 
-    self._failure.add(function (reason) {
+    self._failure.add(function () {
+      var data = arguments;
       if (failure) {
-        reason = failure.call(self, reason);
+        data = [failure.apply(null, data)];
       }
-      child._failure.dispatch(reason);
+      child._failure.dispatch.apply(null, data);
     });
 
     self._finally.add(function () {
@@ -192,10 +195,10 @@
    * Trigger the success callback, and memoize the success data.
    * @private
    */
-  AsyncData.prototype._dispatchSuccess = function (data) {
+  AsyncData.prototype._dispatchSuccess = function () {
     this._hasLoadedOnce = true;
-    this._lastSuccessData = data;
-    this._success.dispatch(data);
+    this._lastSuccessData = arguments;
+    this._success.dispatch.apply(null, arguments);
   };
 
 
@@ -248,6 +251,108 @@
     return promise;
   };
 
+  /**
+   * An AsyncData that receives multiple AsycnData's as parameters.
+   *
+   * Its success and finally are CompoundSignals of the passed AsyncData's
+   * success and finally.
+   *
+   * Its requested and failure are signals that will be trigered if any of
+   * the passed AsyncData's requested or failure are triggered.
+   * @constructor
+   */
+  function CombinedAsyncData(asyncDataArray) {
+    var successSignals = [];
+    var failureSignals = [];
+    var finallySignals = [];
+    var loadingStartedSignals = [];
+    for (i = 0; i < asyncDataArray.length; i++){
+      successSignals.push(asyncDataArray[i]._success);
+      failureSignals.push(asyncDataArray[i]._failure);
+      finallySignals.push(asyncDataArray[i]._finally);
+      loadingStartedSignals.push(asyncDataArray[i]._loadingStarted);
+    }
+
+    this.isLoading = false;
+    this._loadingStarted = signalFromAny(loadingStartedSignals);
+
+    // success when all sourceSignals succeed
+    this._success = compoundSignalFromArray(successSignals);//new CompoundSignal.apply(null, successSignals);
+    this._success.memorize = true;
+
+    // failure when at least one failureSignal fails
+    this._failure = signalFromAny(failureSignals);
+    //new Signal();
+    //var self = this;
+    //for (i = 0; i < arguments.length; i++) {
+    //  arguments[i]._failure.add(function(){
+    //    self._failure.dispatch.apply(null, arguments);
+    //  });
+    //}
+
+    // finally when all finallySignals are triggered
+    this._finally = compoundSignalFromArray(finallySignals);//new CompoundSignal.apply(null, finallySignals);
+    this._finally.memorize = true;
+
+    this._hasLoadedOnce = false;
+    this._lastSuccessData = undefined;
+    this._chainedAsyncData = [];
+  }
+  CombinedAsyncData.prototype = Object.create(AsyncData.prototype);
+  CombinedAsyncData.prototype.constructor = CombinedAsyncData;
+
+
+  var compoundSignalFromArray = (function(){
+    function CompoundSignal_(signalArray) {
+      return CompoundSignal.apply(this, signalArray);
+    }
+    CompoundSignal_.prototype = CompoundSignal.prototype;
+
+    return function(signalArray){
+      return new CompoundSignal_(signalArray);
+    };
+  })();
+
+  /**
+   * Create a new signal that will be dispatched if any of the signals in
+   * the array are dispatched.
+   * @param signalArray
+   */
+  function signalFromAny(signalArray){
+    var signal = new Signal();
+    for (i = 0; i < signalArray.length; i++) {
+      signalArray[i].add(function(){
+        signal.dispatch.apply(null, arguments);
+      });
+    }
+    return signal;
+  }
+
+  /**
+   * Combine multiple asyncData into a single one.
+   *
+   * The semantics are that for the first time for `resolved` to be triggered,
+   * all individual resolved's should have been triggered. From then on, each
+   * individual `resolved` will trigger the resolved of the combined asycnData.
+   *
+   * For `requested`, every individual `requested` will trigger the combined
+   * one.
+   */
+  asyncData.all = function(){
+    return new CombinedAsyncData(arguments);
+  };
+
+  //(function asyncDataAll(){
+  //  var _CombinedAsyncData = CombinedAsyncData;
+  //  function CombinedAsyncData(args) {
+  //    return _CombinedAsyncData.apply(this, args);
+  //  }
+  //  CombinedAsyncData.prototype = _CombinedAsyncData.prototype;
+  //
+  //  return function(){
+  //    return new CombinedAsyncData(arguments);
+  //  };
+  //})();
 
   return asyncData;
 

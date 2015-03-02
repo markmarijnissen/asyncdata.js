@@ -84,8 +84,8 @@ describe("AsyncData", function() {
 
       beforeEach(function(){
         data
-          .resolved()
-          .resolved(successCb, failureCb, finalyCb);
+        .resolved()
+        .resolved(successCb, failureCb, finalyCb);
         loadPromise = data.load();
       });
 
@@ -123,13 +123,13 @@ describe("AsyncData", function() {
 
       beforeEach(function(){
         data
-          .resolved(function(){
-            return successData;
-          }, function (){
-            return failureData;
-          }, function(){
-          })
-          .resolved(successCb, failureCb, finalyCb);
+        .resolved(function(){
+          return successData;
+        }, function (){
+          return failureData;
+        }, function(){
+        })
+        .resolved(successCb, failureCb, finalyCb);
         loadPromise = data.load();
 
       });
@@ -192,18 +192,18 @@ describe("AsyncData", function() {
 
         beforeEach(function () {
           data
-            .resolved(function () {
-              return successData;
-            }, function () {
-              return failureData;
-            }, function () {
-            })
-            .resolved(function(){
-              return secondSuccessData;
-            }, function(){
-              return secondFailureData;
-            })
-            .resolved(successCb, failureCb, finalyCb);
+          .resolved(function () {
+            return successData;
+          }, function () {
+            return failureData;
+          }, function () {
+          })
+          .resolved(function(){
+            return secondSuccessData;
+          }, function(){
+            return secondFailureData;
+          })
+          .resolved(successCb, failureCb, finalyCb);
           loadPromise = data.load();
 
         });
@@ -244,13 +244,13 @@ describe("AsyncData", function() {
 
         beforeEach(function () {
           data
-            .resolved()
-            .resolved(function(){
-              return secondSuccessData;
-            }, function(){
-              return secondFailureData;
-            })
-            .resolved(successCb, failureCb, finalyCb);
+          .resolved()
+          .resolved(function(){
+            return secondSuccessData;
+          }, function(){
+            return secondFailureData;
+          })
+          .resolved(successCb, failureCb, finalyCb);
           loadPromise = data.load();
 
         });
@@ -294,14 +294,14 @@ describe("AsyncData", function() {
 
       beforeEach(function () {
         data
-          .resolved(function () {
-            return successData;
-          }, function () {
-            return failureData;
-          }, function () {
-          })
-          .resolved()
-          .resolved(successCb, failureCb, finalyCb);
+        .resolved(function () {
+          return successData;
+        }, function () {
+          return failureData;
+        }, function () {
+        })
+        .resolved()
+        .resolved(successCb, failureCb, finalyCb);
         loadPromise = data.load();
 
       });
@@ -340,9 +340,9 @@ describe("AsyncData", function() {
 
       beforeEach(function () {
         data
-          .resolved()
-          .resolved()
-          .resolved(successCb, failureCb, finalyCb);
+        .resolved()
+        .resolved()
+        .resolved(successCb, failureCb, finalyCb);
         loadPromise = data.load();
 
       });
@@ -417,10 +417,10 @@ describe("AsyncData", function() {
 
     it('should be possible to chain', function(){
       data.requested(loadingCb1)
-        .resolved()
-        .requested(loadingCb2)
-        .resolved()
-        .requested(loadingCb3);
+      .resolved()
+      .requested(loadingCb2)
+      .resolved()
+      .requested(loadingCb3);
       data.load();
 
       expect(loadingCb1).toHaveBeenCalled();
@@ -506,6 +506,87 @@ describe("AsyncData", function() {
 
     expect(successCb1.calls.count()).toEqual(2);
     expect(successCb2.calls.count()).toEqual(2);
+
+  });
+
+  describe('all()', function(){
+
+    var deferred2, data2;
+
+    beforeEach(function() {
+      deferred2 = Q.defer();
+      data2 = asyncData(function(){
+        return deferred2.promise;
+      });
+    });
+
+    it('should return an AsyncData', function(){
+      var combined = asyncData.all(data, data2)
+      expect(combined.requested).toBeDefined();
+      expect(combined.resolved).toBeDefined();
+    });
+
+    describe('returned AsyncData', function(){
+
+      var combined, successCb, failureCb, finalyCb, loadPromise, loadPromise2;
+
+      beforeEach(function() {
+        successCb = jasmine.createSpy('successCb');
+        failureCb = jasmine.createSpy('failureCb');
+        finalyCb = jasmine.createSpy('finalyCb');
+
+        combined = asyncData.all(data, data2)
+          .resolved(successCb, failureCb, finalyCb);
+
+        data.load();
+        data2.load();
+
+        expect(successCb).not.toHaveBeenCalled();
+        expect(failureCb).not.toHaveBeenCalled();
+        expect(finalyCb).not.toHaveBeenCalled();
+
+      });
+
+      describe('resolved callback', function(){
+
+        it('should be triggered when both source signals are resolved', function(){
+
+          deferred.resolve([5, 6]);
+          deferred2.resolve('lala');
+
+          mockPromises.executeForPromise(deferred.promise);
+          mockPromises.executeForPromise(deferred2.promise);
+
+          expect(successCb).toHaveBeenCalledWith([[5, 6]], ['lala']);
+          expect(failureCb).not.toHaveBeenCalled();
+          expect(finalyCb).toHaveBeenCalled();
+        });
+
+        it('should be triggered a second time when at least one source signal is resolved', function(){
+          deferred.resolve([5, 6]);
+          deferred2.resolve('lala');
+
+          mockPromises.executeForPromise(deferred.promise);
+          mockPromises.executeForPromise(deferred2.promise);
+
+          expect(successCb.calls.count()).toEqual(1);
+          expect(finalyCb.calls.count()).toEqual(1);
+
+          data2.load();
+
+          expect(successCb).toHaveBeenCalledWith([[5, 6]], ['lala']);
+          expect(failureCb).not.toHaveBeenCalled();
+          expect(finalyCb).toHaveBeenCalled();
+
+          expect(successCb.calls.count()).toEqual(2);
+          expect(finalyCb.calls.count()).toEqual(2);
+        })
+      })
+
+
+
+    })
+
 
   });
 });
