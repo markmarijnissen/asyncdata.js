@@ -12,6 +12,14 @@ describe("AsyncData", function() {
     });
   });
 
+  it("should call the load function with the passed arguments", function(){
+
+    var loadFn = jasmine.createSpy('loadFn').and.returnValue(deferred.promise);
+    var data = asyncData(loadFn);
+    data.load(1, 2, 'la');
+    expect(loadFn).toHaveBeenCalledWith(1, 2, 'la');
+  });
+
   describe("should trigger ", function(){
 
     var successCb;

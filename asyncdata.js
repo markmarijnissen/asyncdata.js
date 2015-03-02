@@ -230,7 +230,7 @@
     var self = this;
     this._dispatchLoadingStarted();
 
-    var promise = self._load();
+    var promise = self._load.apply(null, arguments);
     if (promise.then == null || promise['finally'] == null) {
       console.error(promise);
       throw new Error('The callback on \'AsyncData\' must return a promise, ' +
