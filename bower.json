@@ -1,7 +1,7 @@
 {
   "name": "asyncdata",
   "main": "asyncdata.js",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "homepage": "https://github.com/dtheodor/asyncdata.js",
   "authors": [
     "Dimitris Theodorou <dimitris.theodorou@gmail.com>"
