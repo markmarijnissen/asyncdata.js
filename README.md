@@ -109,7 +109,7 @@ Would be great to have a promise-like object that:
 2. its start can also be a notification that is also possible to re-trigger.
 
 A promise-based implementation of this is possible, with a wrapper that on re-load discards the old promise and creates a new one and re-attaches all the `.then()` callbacks. This can also be implemented with signals:
-- a `.resolved(successCallback, failureCallback, finalyCallback)` signal that allows to register callbacks on load finish. This returns a new object with a `.loaded` method, so it can be chained as promises.
+- a `.resolved(successCallback, failureCallback, finalyCallback)` signal that allows to register callbacks on load finish. This returns a new object with a `.resolved` method, so it can be chained as promises.
 - a `.requested(callback)` signal that allows to register a single method on request start
 
 This implementation is a signal-based implementation.
