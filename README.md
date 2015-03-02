@@ -5,9 +5,9 @@ Signal notifications for asynchronous data loading and syncrhonous post-processi
 
 ```js
 
-// so you have a function that requests data and returns a promise
-function loadData(){
-  return $http.get('api/data');
+// you have a function that requests data and returns a promise
+function loadData(startDate){
+  return $http.get('api/data?start-date=' + startDate);
 }
 // create an instance by passing this function
 var data = asyncData(loadData);
@@ -22,10 +22,10 @@ data
     return transform2(transformed);
   });
 
-data.load();
+data.load('2015-01-01');
 // triggers all resolved callbacks
-data.load();
-// triggers all callbacks again
+data.load('2015-02-15');
+// triggers all callbacks again with the new data
 ```
 
 Notifications can be added on each request's start
