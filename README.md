@@ -4,11 +4,13 @@ Signal notifications for asynchronous data loading and syncrhonous post-processi
 ## How to use
 
 ```js
-// create an instance. its single parameter is a function that
-// returns a promise. The promise should resolve the expected data
-var data = asyncData(function loadData(){
-  return Q($.get('api/data'));
-});
+
+// so you have a function that requests data and returns a promise
+function loadData(){
+  return $http.get('api/data');
+}
+// create an instance by passing this function
+var data = asyncData(loadData);
 
 // attach post-processing callbacks
 data
