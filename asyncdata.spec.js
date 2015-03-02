@@ -18,6 +18,7 @@ describe("AsyncData", function() {
     var data = asyncData(loadFn);
     data.load(1, 2, 'la');
     expect(loadFn).toHaveBeenCalledWith(1, 2, 'la');
+    expect(data.lastRequestArguments).toEqual([1, 2, 'la']);
   });
 
   describe("should trigger ", function(){

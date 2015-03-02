@@ -229,7 +229,7 @@
     // what about concurrent loads?
     var self = this;
     this._dispatchLoadingStarted();
-
+    this.lastRequestArguments = [].slice.call(arguments);
     var promise = self._load.apply(null, arguments);
     if (promise.then == null || promise['finally'] == null) {
       console.error(promise);
