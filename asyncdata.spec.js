@@ -730,4 +730,30 @@ describe("AsyncData", function() {
       })
     });
   });
+
+  it('should trigger multiple parallel resolved', function(){
+
+    // this test triggers a bug caused by writing a for loop as
+    // `for(i = 0; ...)` instead of `for(var i = 0; ...)`
+    // (notice the `var` missing)
+    var successCb1 = jasmine.createSpy('successCb1');
+    var successCb2 = jasmine.createSpy('successCb2');
+    var successCb3 = jasmine.createSpy('successCb3');
+    var successCb4 = jasmine.createSpy('successCb4');
+
+    data.resolved(successCb1);
+    data.resolved(successCb2);
+    data.resolved(successCb3);
+    data.resolved(successCb4);
+
+    data.load();
+    deferred.resolve([1,2]);
+    mockPromises.executeForPromise(deferred.promise);
+
+    expect(successCb1).toHaveBeenCalledWith([1,2]);
+    expect(successCb1).toHaveBeenCalledWith([1,2]);
+    expect(successCb1).toHaveBeenCalledWith([1,2]);
+    expect(successCb1).toHaveBeenCalledWith([1,2]);
+
+  });
 });

@@ -186,7 +186,7 @@
   AsyncData.prototype._dispatchLoadingStarted = function () {
     this.isLoading = true;
     this._loadingStarted.dispatch();
-    for (i = 0; i < this._chainedAsyncData.length; i++) {
+    for (var i = 0; i < this._chainedAsyncData.length; i++) {
       this._chainedAsyncData[i]._dispatchLoadingStarted();
     }
   };
@@ -265,7 +265,7 @@
     var successSignals = [];
     var failureSignals = [];
     var finallySignals = [];
-    for (i = 0; i < asyncDataArray.length; i++){
+    for (var i = 0; i < asyncDataArray.length; i++){
       successSignals.push(asyncDataArray[i]._success);
       failureSignals.push(asyncDataArray[i]._failure);
       finallySignals.push(asyncDataArray[i]._finally);
@@ -320,7 +320,7 @@
    */
   function signalFromAny(signalArray){
     var signal = new Signal();
-    for (i = 0; i < signalArray.length; i++) {
+    for (var i = 0; i < signalArray.length; i++) {
       signalArray[i].add(function(){
         signal.dispatch.apply(null, arguments);
       });
