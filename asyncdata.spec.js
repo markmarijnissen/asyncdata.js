@@ -426,6 +426,22 @@ describe("AsyncData", function() {
       expect(loadingCb1).toHaveBeenCalled();
       expect(loadingCb2).toHaveBeenCalled();
       expect(loadingCb3).toHaveBeenCalled();
+    });
+
+    it('should propagate to combined AsyncData', function(){
+
+
+      var combined = asyncData.all(data);
+      combined.requested(loadingCb1);
+      var last = combined.resolved().requested(loadingCb2);
+
+      data.load();
+      expect(combined.isLoading).toEqual(true);
+      expect(last.isLoading).toEqual(true);
+      expect(loadingCb1).toHaveBeenCalled();
+      expect(loadingCb2).toHaveBeenCalled();
+
+
     })
   });
 
