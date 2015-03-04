@@ -123,14 +123,23 @@
    * @constructor
    */
   function AsyncData() {
-    this.isLoading = false;
-    this._loadingStarted = new Signal();
-    this._success = new Signal();
-    this._failure = new Signal();
-    this._finally = new Signal();
-    this._hasLoadedOnce = false;
-    this._lastSuccessData = undefined;
-    this._chainedAsyncData = [];
+    var self = this;
+    self.isLoading = false;
+    self._loadingStarted = new Signal();
+    self._success = new Signal();
+    self._success.memorize = true;
+    self._failure = new Signal();
+    self._failure.memorize = true;
+    self._finally = new Signal();
+    self._finally.memorize = true;
+
+    //TODO: what to do with self.isLoading with several intermixed started and finally calls?
+    self._loadingStarted.add(function(){
+      self.isLoading = true;
+    });
+    self._finally.add(function(){
+      self.isLoading = false;
+    });
   }
 
   /**
@@ -141,22 +150,16 @@
 
     var self = this;
     var child = new AsyncData();
-    self._chainedAsyncData.push(child);
+    self._loadingStarted.add(function(){
+      child._loadingStarted.dispatch();
+    });
 
-    if (self._hasLoadedOnce) {
-      // if already fired, fire immediately on 'loaded' callback registration
-      var data = self._lastSuccessData;
-      if (success) {
-        data = [success.apply(null, data)];
-      }
-      child._dispatchSuccess.apply(child, data);
-    }
     self._success.add(function () {
       var data = arguments;
       if (success) {
         data = [success.apply(null, data)];
       }
-      child._dispatchSuccess.apply(child, data);
+      child._success.dispatch.apply(child, data);
     });
 
     self._failure.add(function () {
@@ -176,29 +179,6 @@
     });
 
     return child;
-  };
-
-  /**
-   * Dispatch the signal that will trigger the `loadingStarted` callbacks for
-   * this AsyncData and all its chained children.
-   * @private
-   */
-  AsyncData.prototype._dispatchLoadingStarted = function () {
-    this.isLoading = true;
-    this._loadingStarted.dispatch();
-    for (var i = 0; i < this._chainedAsyncData.length; i++) {
-      this._chainedAsyncData[i]._dispatchLoadingStarted();
-    }
-  };
-
-  /**
-   * Trigger the success callback, and memoize the success data.
-   * @private
-   */
-  AsyncData.prototype._dispatchSuccess = function () {
-    this._hasLoadedOnce = true;
-    this._lastSuccessData = arguments;
-    this._success.dispatch.apply(null, arguments);
   };
 
 
@@ -231,7 +211,7 @@
   AsyncDataSource.prototype.load = function () {
     // what about concurrent loads?
     var self = this;
-    this._dispatchLoadingStarted();
+    this._loadingStarted.dispatch();
     this.lastRequestArguments = [].slice.call(arguments);
     var promise = self._load.apply(null, arguments);
     if (promise.then == null || promise['finally'] == null) {
@@ -240,7 +220,7 @@
       'it returned \'' + promise + '\' instead.')
     }
     promise.then(function (data) {
-      self._dispatchSuccess(data);
+      self._success.dispatch(data);
     }, function (reason) {
       self._failure.dispatch(reason);
     });
@@ -262,42 +242,43 @@
    * @constructor
    */
   function CombinedAsyncData(asyncDataArray) {
+    var self = this;
     var successSignals = [];
     var failureSignals = [];
     var finallySignals = [];
+    var loadingStartedSignals = [];
     for (var i = 0; i < asyncDataArray.length; i++){
       successSignals.push(asyncDataArray[i]._success);
       failureSignals.push(asyncDataArray[i]._failure);
       finallySignals.push(asyncDataArray[i]._finally);
-
-      // unlike the signals involved with `resolved`, the `requested`
-      // signal is triggered explicitily by the parent signal to all its
-      // _chainedAsyncData. so we add
-      // ourselves to each of the source signals _chainedAsyncData
-      asyncDataArray[i]._chainedAsyncData.push(this); //to propagate `requested`
+      loadingStartedSignals.push(asyncDataArray[i]._loadingStarted);
     }
 
-    this.isLoading = false;
-    this._loadingStarted = new Signal();
+    self.isLoading = false;
+    // loadingStarted when at least one loadingStartedSignals is triggered
+    self._loadingStarted = signalFromAny(loadingStartedSignals);//new Signal();
 
     // success when all sourceSignals succeed
-    this._success = compoundSignalFromArray(successSignals);//new CompoundSignal.apply(null, successSignals);
-    this._success.memorize = true;
+    self._success = compoundSignalFromArray(successSignals);//new CompoundSignal.apply(null, successSignals);
+    self._success.memorize = true;
+    self._success.override = true;
 
     // failure when at least one failureSignal fails
-    this._failure = signalFromAny(failureSignals);
+    self._failure = signalFromAny(failureSignals);
 
     // finally when all finallySignals are triggered
-    this._finally = compoundSignalFromArray(finallySignals);//new CompoundSignal.apply(null, finallySignals);
-    this._finally.memorize = true;
+    self._finally = compoundSignalFromArray(finallySignals);//new CompoundSignal.apply(null, finallySignals);
+    self._finally.memorize = true;
+    self._finally.override = true;
 
-    this._hasLoadedOnce = false;
-    this._lastSuccessData = undefined;
-
-    // a list of AsyncData that are chained to this.
-    // used to propagate `requested` events to chained children
-    this._chainedAsyncData = [];
+    self._loadingStarted.add(function(){
+      self.isLoading = true;
+    });
+    self._finally.add(function(){
+      self.isLoading = false;
+    });
   }
+
   CombinedAsyncData.prototype = Object.create(AsyncData.prototype);
   CombinedAsyncData.prototype.constructor = CombinedAsyncData;
 
