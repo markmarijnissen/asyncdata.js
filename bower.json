@@ -30,7 +30,8 @@
   ],
   "dependencies": {
     "js-signals": "1.0.0",
-    "CompoundSignal": "millermedeiros/CompoundSignal#~0.2.0"
+    "CompoundSignal": "millermedeiros/CompoundSignal#~0.2.0",
+    "kefir": "~1.1.0"
   },
   "devDependencies": {
     "jasmine": "2.2.1",

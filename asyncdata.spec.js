@@ -18,7 +18,6 @@ describe("AsyncData", function() {
     var data = asyncData(loadFn);
     data.load(1, 2, 'la');
     expect(loadFn).toHaveBeenCalledWith(1, 2, 'la');
-    expect(data.lastRequestArguments).toEqual([1, 2, 'la']);
   });
 
   describe("should trigger ", function(){
@@ -570,19 +569,19 @@ describe("AsyncData", function() {
 
         it('should be triggered when both source signals are resolved', function(){
 
-          deferred.resolve([5, 6]);
+          deferred.resolve('abab');
           deferred2.resolve('lala');
 
           mockPromises.executeForPromise(deferred.promise);
           mockPromises.executeForPromise(deferred2.promise);
 
-          expect(successCb).toHaveBeenCalledWith([[5, 6]], ['lala']);
+          expect(successCb).toHaveBeenCalledWith(['abab', 'lala']);
           expect(failureCb).not.toHaveBeenCalled();
           expect(finalyCb).toHaveBeenCalled();
         });
 
         it('should be triggered a second time when at least one source signal is resolved', function(){
-          deferred.resolve([5, 6]);
+          deferred.resolve('abab');
           deferred2.resolve('lala');
 
           mockPromises.executeForPromise(deferred.promise);
@@ -594,7 +593,7 @@ describe("AsyncData", function() {
           data2.load();
           mockPromises.executeForPromise(deferred2.promise);
 
-          expect(successCb).toHaveBeenCalledWith([[5, 6]], ['lala']);
+          expect(successCb).toHaveBeenCalledWith(['abab', 'lala']);
           expect(failureCb).not.toHaveBeenCalled();
           expect(finalyCb).toHaveBeenCalled();
 
@@ -604,7 +603,7 @@ describe("AsyncData", function() {
 
         it('should not be triggered when only one source signals is resolved', function(){
 
-          deferred.resolve([5, 6]);
+          deferred.resolve('abab');
 
           mockPromises.executeForPromise(deferred.promise);
 
@@ -621,7 +620,7 @@ describe("AsyncData", function() {
 
           expect(successCb).not.toHaveBeenCalled();
           expect(failureCb).toHaveBeenCalledWith('pwned');
-          expect(finalyCb).not.toHaveBeenCalled();
+          expect(finalyCb).toHaveBeenCalled();
         });
       });
 
@@ -667,7 +666,7 @@ describe("AsyncData", function() {
           combined.resolved()
             .resolved(successCb, failureCb, finalyCb);
 
-          deferred.resolve([5, 6]);
+          deferred.resolve('abab');
           deferred2.resolve('lala');
           data.load();
           data2.load();
@@ -675,7 +674,7 @@ describe("AsyncData", function() {
           mockPromises.executeForPromise(deferred.promise);
           mockPromises.executeForPromise(deferred2.promise);
 
-          expect(successCb).toHaveBeenCalledWith([[5, 6]], ['lala']);
+          expect(successCb).toHaveBeenCalledWith(['abab','lala']);
           expect(failureCb).not.toHaveBeenCalled();
           expect(finalyCb).toHaveBeenCalled();
 
@@ -689,7 +688,7 @@ describe("AsyncData", function() {
             })
             .resolved(successCb, failureCb, finalyCb);
 
-          deferred.resolve([5, 6]);
+          deferred.resolve('abab');
           deferred2.resolve('lala');
           data.load();
           data2.load();
@@ -711,7 +710,7 @@ describe("AsyncData", function() {
             })
             .resolved(successCb, failureCb, finalyCb);
 
-          deferred.resolve([5, 6]);
+          deferred.resolve('abab');
           deferred2.reject('lala');
           data.load();
           data2.load();
@@ -730,7 +729,7 @@ describe("AsyncData", function() {
 
       it('should trigger resolved when attached late', function(){
 
-        deferred.resolve([5, 6]);
+        deferred.resolve('abab');
         deferred2.resolve('lala');
         data.load();
         data2.load();
@@ -739,7 +738,7 @@ describe("AsyncData", function() {
 
         combined.resolved(successCb, failureCb, finalyCb);
 
-        expect(successCb).toHaveBeenCalledWith([[5, 6]], ['lala']);
+        expect(successCb).toHaveBeenCalledWith(['abab','lala']);
         expect(failureCb).not.toHaveBeenCalled();
         expect(finalyCb).toHaveBeenCalled();
 

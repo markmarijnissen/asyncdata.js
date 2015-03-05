@@ -8,16 +8,16 @@
 
 (function(definition) {
   if (typeof module !== 'undefined') {
-    var signals_ = require('signals');
-    module.exports = definition(signals_.Signal, signals_.CompoundSignal);
+    var kefir_ = require('kefir');
+    module.exports = definition(kefir_);
   }
   else if (typeof define === 'function' && define.amd) {
-    define(['signals', 'CompoundSignal'], definition);
+    define(['kefir'], definition);
   }
   else {
-    this['asyncData'] = definition(signals.Signal, signals.CompoundSignal);
+    this['asyncData'] = definition(Kefir);
   }
-}(function(Signal, CompoundSignal) {
+}(function(Kefir) {
 
   /**
    * Returns an object with a `resolved(success, failure, finally)` method,
@@ -122,22 +122,22 @@
    * everytime the data it depends on is reloaded.
    * @constructor
    */
-  function AsyncData() {
+  function AsyncData(responseStream,requestStream,i) {
     var self = this;
-    self.isLoading = false;
-    self._loadingStarted = new Signal();
-    self._success = new Signal();
-    self._success.memorize = true;
-    self._failure = new Signal();
-    self._failure.memorize = true;
-    self._finally = new Signal();
-    self._finally.memorize = true;
+    
+    self.index = i || 0;
+    self.index++;
+    console.log('AsyncData '+self.index);
 
-    //TODO: what to do with self.isLoading with several intermixed started and finally calls?
-    self._loadingStarted.add(function(){
+    self.isLoading = false;
+    self.requestStream = requestStream;
+    self.responseStream = responseStream;
+    self.responseStream.log('responseStream '+self.index);
+    
+    self.requestStream.onValue(function(){
       self.isLoading = true;
     });
-    self._finally.add(function(){
+    self.responseStream.onAny(function(){
       self.isLoading = false;
     });
   }
@@ -147,50 +147,27 @@
    * for each respective outcome.
    */
   AsyncData.prototype.resolved = function (success, failure, finally_) {
-
-    var self = this;
-    var child = new AsyncData();
-    self._loadingStarted.add(function(){
-      child._loadingStarted.dispatch();
-    });
-
-    self._success.add(function () {
-      var data = arguments;
-      if (success) {
-        data = [success.apply(null, data)];
-      }
-      child._success.dispatch.apply(child, data);
-    });
-
-    self._failure.add(function () {
-      var data = arguments;
-      if (failure) {
-        data = [failure.apply(null, data)];
-      }
-      child._failure.dispatch.apply(null, data);
-    });
-
-    self._finally.add(function () {
-      if (finally_) {
+    var nextStream = this.responseStream
+      .map(success)
+      .mapErrors(failure)
+      .toProperty();
+    if(finally_) {
+      this.responseStream.errorsToValues().onValue(function(){
         finally_();
-      }
-      child.isLoading = false;
-      child._finally.dispatch();
-    });
-
-    return child;
+      });
+    }
+    return new AsyncData(nextStream,this.requestStream,this.index);
   };
 
 
   AsyncData.prototype.requested = function (callback) {
-    if (callback) {
-      this._loadingStarted.add(callback);
-    }
+    this.requestStream.onValue(callback);
     return this;
   };
 
   AsyncData.prototype.progressed = function (callback) {
-    //TODO: integrate with promise.notify()
+
+    return this;
   };
 
 
@@ -201,7 +178,9 @@
    * @constructor
    */
   function AsyncDataSource(loadFn) {
-    AsyncData.call(this);
+    var self = this;
+    var requestStream = Kefir.emitter();
+    AsyncData.call(this,requestStream.flatMap().toProperty(),requestStream);
     this._load = loadFn;
   }
 
@@ -211,103 +190,17 @@
   AsyncDataSource.prototype.load = function () {
     // what about concurrent loads?
     var self = this;
-    this._loadingStarted.dispatch();
-    this.lastRequestArguments = [].slice.call(arguments);
+    self.isLoading = true;
     var promise = self._load.apply(null, arguments);
-    if (promise.then == null || promise['finally'] == null) {
+    if (!promise.then || !promise['finally']) {
       console.error(promise);
       throw new Error('The callback on \'AsyncData\' must return a promise, ' +
-      'it returned \'' + promise + '\' instead.')
+      'it returned \'' + promise + '\' instead.');
     }
-    promise.then(function (data) {
-      self._success.dispatch(data);
-    }, function (reason) {
-      self._failure.dispatch(reason);
-    });
-    promise['finally'](function () {
-      self.isLoading = false;
-      self._finally.dispatch();
-    });
+    var promiseStream = Kefir.fromPromise(promise);
+    self.requestStream.emit(promiseStream);
     return promise;
   };
-
-  /**
-   * An AsyncData that receives multiple AsycnData's as parameters.
-   *
-   * Its success and finally are CompoundSignals of the passed AsyncData's
-   * success and finally.
-   *
-   * Its requested and failure are signals that will be trigered if any of
-   * the passed AsyncData's requested or failure are triggered.
-   * @constructor
-   */
-  function CombinedAsyncData(asyncDataArray) {
-    var self = this;
-    var successSignals = [];
-    var failureSignals = [];
-    var finallySignals = [];
-    var loadingStartedSignals = [];
-    for (var i = 0; i < asyncDataArray.length; i++){
-      successSignals.push(asyncDataArray[i]._success);
-      failureSignals.push(asyncDataArray[i]._failure);
-      finallySignals.push(asyncDataArray[i]._finally);
-      loadingStartedSignals.push(asyncDataArray[i]._loadingStarted);
-    }
-
-    self.isLoading = false;
-    // loadingStarted when at least one loadingStartedSignals is triggered
-    self._loadingStarted = signalFromAny(loadingStartedSignals);//new Signal();
-
-    // success when all sourceSignals succeed
-    self._success = compoundSignalFromArray(successSignals);//new CompoundSignal.apply(null, successSignals);
-    self._success.memorize = true;
-    self._success.override = true;
-
-    // failure when at least one failureSignal fails
-    self._failure = signalFromAny(failureSignals);
-
-    // finally when all finallySignals are triggered
-    self._finally = compoundSignalFromArray(finallySignals);//new CompoundSignal.apply(null, finallySignals);
-    self._finally.memorize = true;
-    self._finally.override = true;
-
-    self._loadingStarted.add(function(){
-      self.isLoading = true;
-    });
-    self._finally.add(function(){
-      self.isLoading = false;
-    });
-  }
-
-  CombinedAsyncData.prototype = Object.create(AsyncData.prototype);
-  CombinedAsyncData.prototype.constructor = CombinedAsyncData;
-
-
-  var compoundSignalFromArray = (function(){
-    function CompoundSignal_(signalArray) {
-      return CompoundSignal.apply(this, signalArray);
-    }
-    CompoundSignal_.prototype = CompoundSignal.prototype;
-
-    return function(signalArray){
-      return new CompoundSignal_(signalArray);
-    };
-  })();
-
-  /**
-   * Create a new signal that will be dispatched if any of the signals in
-   * the array are dispatched.
-   * @param signalArray
-   */
-  function signalFromAny(signalArray){
-    var signal = new Signal();
-    for (var i = 0; i < signalArray.length; i++) {
-      signalArray[i].add(function(){
-        signal.dispatch.apply(null, arguments);
-      });
-    }
-    return signal;
-  }
 
   /**
    * Combine multiple asyncData into a single one.
@@ -320,7 +213,18 @@
    * one.
    */
   asyncData.all = function(){
-    return new CombinedAsyncData(arguments);
+    var asyncDatas = Array.prototype.slice.call(arguments);
+    
+    var responseStreams = asyncDatas.map(function(asyncData) { 
+      return asyncData.responseStream; 
+    });
+    var response = Kefir.combine(responseStreams).toProperty();
+
+    var requestStreams = asyncDatas.map(function(asyncData) { 
+      return asyncData.requestStream; 
+    });
+    var request = Kefir.merge(requestStreams);
+    return new AsyncData(response,request,100);
   };
 
   return asyncData;
